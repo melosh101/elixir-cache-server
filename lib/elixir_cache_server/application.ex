@@ -2,14 +2,19 @@ defmodule ElixirCacheServer.Application do
   # See https://hexdocs.pm/elixir/Application.html
   # for more information on OTP Applications
   @moduledoc false
+  alias ElixirCacheServer.CommandHandler
 require Logger
 
   use Application
   @impl true
   def start(_type, _args) do
-    args = OptionParser.parse(System.argv(), strict: [port: :integer, origin: :string]) |> elem(0)
+    args = OptionParser.parse(System.argv(), strict: [port: :integer, origin: :string, "clear-cache": :boolean]) |> elem(0)
+    :ets.new(:config, [:set, :protected, :named_table])
+    :ets.insert(:config, {:port, args[:port]})
+    :ets.insert(:config, {:origin, args[:origin]})
     Logger.info("Starting the application with args: #{inspect(args)}")
     ElixirCacheServer.Cache.newCache()
+    CommandHandler.start_link(__MODULE__);
     children = [
       {Plug.Cowboy, scheme: :http, plug: ElixirCacheServer.CachePlug, options: [port: args[:port]]}
       # Starts a worker by calling: ElixirCacheServer.Worker.start_link(arg)
